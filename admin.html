@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ADMIN — YOBSZ STORE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --abu-gelap: #2a2a2a;
+  --putih: #ffffff;
+  --hitam: #000000;
+  --hijau: #22c55e;
+  --kuning: #facc15;
+  --merah: #ef4444;
+  --ungu: #8b5cf6;
+  --shadow: 4px 4px 0 rgba(0,0,0,0.9);
+}
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Montserrat', sans-serif;
+}
+body {
+  background: linear-gradient(135deg, #2a2a2a, #444444, #2a2a2a);
+  min-height: 100vh;
+  color: #fff;
+  padding: 30px 20px;
+}
+.kotak {
+  max-width: 480px;
+  margin: 0 auto;
+  background: #3a3a3a;
+  border: 3px solid #000;
+  border-radius: 14px;
+  padding: 25px;
+  box-shadow: var(--shadow);
+}
+h2 { text-align: center; margin-bottom: 20px; font-weight: 800; }
+label { display: block; margin: 12px 0 5px; font-weight: 700; }
+input, select, button {
+  width: 100%;
+  padding: 12px;
+  border: 3px solid #000;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 700;
+  outline: none;
+}
+input, select {
+  background: rgba(255,255,255,0.1);
+  color: #fff;
+}
+button {
+  margin-top: 10px;
+  cursor: pointer;
+  box-shadow: var(--shadow-kecil);
+  transition: transform 0.1s;
+}
+button:active { transform: translate(2px, 2px); box-shadow: none; }
+.btn-masuk { background: var(--ungu); color: #fff; }
+.btn-sukses { background: var(--hijau); color: #000; }
+.btn-hapus { background: var(--merah); color: #fff; }
+.btn-logout { background: #555; color: #fff; margin-bottom: 20px; }
+.riwayat-item {
+  background: rgba(255,255,255,0.05);
+  border: 2px solid #000;
+  border-radius: 10px;
+  padding: 15px;
+  margin-bottom: 12px;
+}
+.riwayat-item p { margin: 4px 0; font-size: 13px; font-weight: 600; }
+.status-pending { color: #facc15; font-weight: 800; }
+.status-sukses { color: #22c55e; font-weight: 800; }
+.status-gagal { color: #ef4444; font-weight: 800; }
+.aksi { display: flex; gap: 8px; margin-top: 10px; }
+.aksi button { flex: 1; padding: 8px; font-size: 12px; margin: 0; }
+.sembunyi { display: none !important; }
+.pesan { margin-top: 15px; padding: 10px; border-radius: 8px; text-align: center; font-weight: 700; }
+.sukses { background: rgba(34,197,94,0.2); color: #22c55e; }
+.gagal { background: rgba(239,68,68,0.2); color: #ef4444; }
+.memuat { text-align: center; padding: 30px; color: #888; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<!-- HALAMAN LOGIN -->
+<div class="kotak" id="halLogin">
+  <h2>🔐 MASUK ADMIN</h2>
+  <label>Kata Sandi Admin</label>
+  <input type="password" id="pwAdmin" placeholder="Masukkan kata sandi...">
+  <button class="btn-masuk" onclick="cekLogin()">MASUK</button>
+  <div id="pesanLogin" class="pesan sembunyi"></div>
+</div>
+
+<!-- HALAMAN PANEL -->
+<div class="kotak sembunyi" id="halPanel">
+  <button class="btn-logout" onclick="keluar()">🚪 KELUAR</button>
+  <h2>⚙️ PANEL KONTROL RIWAYAT</h2>
+  <div id="daftarTrx">
+    <p class="memuat">Memuat data...</p>
+  </div>
+</div>
+
+<script>
+// === PENGATURAN — SAMA DENGAN index.html ===
+const BIN_ID = "6abf2e82ac6210605a0b2cfd";
+const API_KEY = "$2a$10$CkgtgR7hS4OMppFtzF8S.eJ/qRM6tdjSrKeLwzsi9cwForo5kkWHu";
+const PW_ADMIN = "yobsz87"; // contoh: yobsz2026
+const URL_BIN = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
+
+let dataRiwayat = [];
+
+// === CEK LOGIN ===
+function cekLogin() {
+  const pw = document.getElementById('pwAdmin').value.trim();
+  const pesan = document.getElementById('pesanLogin');
+  
+  if (pw === PW_ADMIN) {
+    sessionStorage.setItem('yobsz_admin', 'ok');
+    document.getElementById('halLogin').classList.add('sembunyi');
+    document.getElementById('halPanel').classList.remove('sembunyi');
+    ambilData();
+  } else {
+    pesan.textContent = "❌ Kata sandi salah!";
+    pesan.className = "pesan gagal";
+    pesan.classList.remove('sembunyi');
+  }
+}
+
+// === CEK SUDAH LOGIN ===
+if (sessionStorage.getItem('yobsz_admin') === 'ok') {
+  document.getElementById('halLogin').classList.add('sembunyi');
+  document.getElementById('halPanel').classList.remove('sembunyi');
+  ambilData();
+}
+
+// === KELUAR ===
+function keluar() {
+  sessionStorage.removeItem('yobsz_admin');
+  document.getElementById('halPanel').classList.add('sembunyi');
+  document.getElementById('halLogin').classList.remove('sembunyi');
+  document.getElementById('pwAdmin').value = "";
+}
+
+// === AMBIL DATA DARI JSONBIN ===
+async function ambilData() {
+  try {
+    const res = await fetch(URL_BIN + "/latest", {
+      headers: { "X-Master-Key": API_KEY }
+    });
+    const data = await res.json();
+    dataRiwayat = data.record.riwayat || [];
+    tampilkanDaftar();
+  } catch (err) {
+    console.error(err);
+    document.getElementById('daftarTrx').innerHTML = '<p class="memuat" style="color:#ef4444;">❌ Gagal ambil data</p>';
+  }
+}
+
+// === TAMPILKAN DAFTAR ===
+function tampilkanDaftar() {
+  const el = document.getElementById('daftarTrx');
+  
+  if (dataRiwayat.length === 0) {
+    el.innerHTML = '<p class="memuat">Belum ada transaksi</p>';
+    return;
+  }
+  
+  el.innerHTML = "";
+  dataRiwayat.forEach((trx, indeks) => {
+    let kelasStatus = "status-pending";
+    if (trx.status === "SUKSES") kelasStatus = "status-sukses";
+    if (trx.status === "GAGAL") kelasStatus = "status-gagal";
+    
+    el.innerHTML += `
+      <div class="riwayat-item">
+        <p><strong>Nama:</strong> ${trx.nama}</p>
+        <p><strong>Produk:</strong> ${trx.produk}</p>
+        <p><strong>Harga:</strong> ${trx.harga}</p>
+        <p><strong>WA:</strong> ${trx.wa}</p>
+        <p><strong>Waktu:</strong> ${trx.waktu}</p>
+        <p><strong>Status:</strong> <span class="${kelasStatus}" id="stt-${indeks}">${trx.status}</span></p>
+        <div class="aksi">
+          <button class="btn-sukses" onclick="ubahStatus(${indeks}, 'SUKSES')">✅ SUKSES</button>
+          <button class="btn-masuk" onclick="ubahStatus(${indeks}, 'PENDING')">⏳ PENDING</button>
+          <button class="btn-hapus" onclick="ubahStatus(${indeks}, 'GAGAL')">❌ GAGAL</button>
+        </div>
+        <button class="btn-hapus" style="margin-top:8px;" onclick="hapusItem(${indeks})">🗑️ HAPUS</button>
+      </div>
+    `;
+  });
+}
+
+// === UBAH STATUS ===
+async function ubahStatus(indeks, statusBaru) {
+  dataRiwayat[indeks].status = statusBaru;
+  await simpanPerubahan();
+  tampilkanDaftar();
+}
+
+// === HAPUS ITEM ===
+async function hapusItem(indeks) {
+  if (!confirm("Yakin hapus transaksi ini?")) return;
+  dataRiwayat.splice(indeks, 1);
+  await simpanPerubahan();
+  tampilkanDaftar();
+}
+
+// === SIMPAN KE JSONBIN ===
+async function simpanPerubahan() {
+  try {
+    await fetch(URL_BIN, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Master-Key": API_KEY
+      },
+      body: JSON.stringify({ riwayat: dataRiwayat })
+    });
+  } catch (err) {
+    console.error(err);
+    alert("❌ Gagal menyimpan!");
+  }
+}
+</script>
+
+</body>
+</html>
